@@ -19,17 +19,21 @@ async def listar_facturas(mi_sesion: Sesion_dependencia):
     facturas = mi_sesion.exec(select(Factura)).all()
     return facturas
 
-
 @router.get("/{id}")
-async def obtener_factura(id: int):
+async def obtener_factura(
+    id: int,
+    mi_sesion: Sesion_dependencia
+):
 
-    for factura in listas_facturas:
+    factura = mi_sesion.get(Factura, id)
 
-        if factura.id == id:
-            return factura
+    if not factura:
+        raise HTTPException(
+            status_code=404,
+            detail="Factura no encontrada"
+        )
 
-    return {"error": "Factura no encontrada"}
-
+    return factura
 
 @router.post("/{cliente_id}")
 async def crear_factura(
@@ -58,40 +62,68 @@ async def crear_factura(
 @router.put("/{id}")
 async def editar_factura(
     id: int,
-    datos_factura: EditarFactura
+    datos_factura: EditarFactura,
+    mi_sesion: Sesion_dependencia
 ):
 
-    for i, factura in enumerate(listas_facturas):
+    factura = mi_sesion.get(Factura, id)
 
-        if factura.id == id:
+    if not factura:
+        raise HTTPException(
+            status_code=404,
+            detail="Factura no encontrada"
+        )
 
-            factura_val = Factura.model_validate(
-                datos_factura.model_dump()
-            )
+    datos = datos_factura.model_dump(exclude_unset=True)
 
-            factura_val.id = id
+    factura.sqlmodel_update(datos)
 
-            listas_facturas[i] = factura_val
+    mi_sesion.add(factura)
+    mi_sesion.commit()
+    mi_sesion.refresh(factura)
 
-            return {
-                "mensaje": "Factura actualizada",
-                "factura": factura_val
-            }
+    return factura
 
-    return {"error": "Factura no encontrada"}
+@router.put("/{id}")
+async def editar_factura(
+    id: int,
+    datos_factura: EditarFactura,
+    mi_sesion: Sesion_dependencia
+):
 
+    factura = mi_sesion.get(Factura, id)
+
+    if not factura:
+        raise HTTPException(
+            status_code=404,
+            detail="Factura no encontrada"
+        )
+
+    datos = datos_factura.model_dump(exclude_unset=True)
+
+    factura.sqlmodel_update(datos)
+
+    mi_sesion.add(factura)
+    mi_sesion.commit()
+    mi_sesion.refresh(factura)
+
+    return factura
 
 @router.delete("/{id}")
-async def eliminar_factura(id: int):
+async def eliminar_factura(
+    id: int,
+    mi_sesion: Sesion_dependencia
+):
 
-    for i, factura in enumerate(listas_facturas):
+    factura = mi_sesion.get(Factura, id)
 
-        if factura.id == id:
+    if not factura:
+        raise HTTPException(
+            status_code=404,
+            detail="Factura no encontrada"
+        )
 
-            del listas_facturas[i]
+    mi_sesion.delete(factura)
+    mi_sesion.commit()
 
-            return {
-                "mensaje": "Factura eliminada"
-            }
-
-    return {"error": "Factura no encontrada"}
+    return factura
